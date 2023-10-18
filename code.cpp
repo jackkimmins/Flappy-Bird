@@ -3,8 +3,8 @@
 #include <vector>
 #include <random>
 
-constexpr int WIDTH = 1200;
-constexpr int HEIGHT = 800;
+constexpr int WIDTH = 1280;
+constexpr int HEIGHT = 720;
 constexpr float GRAVITY = 0.5f;
 constexpr float BIRD_JUMP = -10.0f;
 constexpr int PIPE_SPEED = 1;
