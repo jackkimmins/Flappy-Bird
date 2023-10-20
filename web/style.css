@@ -15,7 +15,7 @@ body {
 }
 
 canvas {
-    width: 100vw;
+    aspect-ratio: 16 / 9;
     height: 100vh;
     border: 0px none;
     background-color: black;
