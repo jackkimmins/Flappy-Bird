@@ -75,13 +75,12 @@ private:
 
     inline void Reset() {
         bird = Bird();
+        score = 0;
         pipes.clear();
     }
 
     inline void OnPipePassed() {
-        if (successSound) {
-            Mix_PlayChannel(-1, successSound, 0);
-        }
+        if (successSound) Mix_PlayChannel(-1, successSound, 0);
         score++;
     }
 public:
@@ -106,13 +105,9 @@ public:
     inline void Update(float deltaTime) {
         bird.Update(deltaTime);
 
-        if (pipes.empty() || WIDTH - pipes.back().x >= 400) {
-            pipes.emplace_back();
-        }
+        if (pipes.empty() || WIDTH - pipes.back().x >= 400) pipes.emplace_back();
 
-        for (auto& pipe : pipes) {
-            pipe.Update(deltaTime);
-        }
+        for (auto& pipe : pipes) pipe.Update(deltaTime);
 
         pipes.erase(std::remove_if(pipes.begin(), pipes.end(), [](const Pipe& pipe) {
             return pipe.x + 60 < 0;
@@ -122,9 +117,7 @@ public:
             if (bird.rect.x < pipe.x + 60 && bird.rect.x + bird.rect.w > pipe.x && 
                 (bird.rect.y < pipe.gapY || bird.rect.y + bird.rect.h > pipe.gapY + 180)) {
                 // Collision detected
-                if (smackSound) {
-                    Mix_PlayChannel(-1, smackSound, 0);
-                }
+                if (smackSound) Mix_PlayChannel(-1, smackSound, 0);
                 Reset();
                 return;
             } else if (bird.rect.x > pipe.x + 60 && !pipe.hasPassed) {
@@ -186,14 +179,10 @@ int main() {
     game.successSound = Mix_LoadWAV("assets/pass.ogg");
     game.smackSound = Mix_LoadWAV("assets/smack.ogg");
 
-    if (TTF_Init() == -1) {
-        std::cerr << "SDL_ttf could not initialize! SDL_ttf Error: " << TTF_GetError() << std::endl;
-    }
+    if (TTF_Init() == -1) std::cerr << "SDL_ttf could not initialize! SDL_ttf Error: " << TTF_GetError() << std::endl;
 
     font = TTF_OpenFont("assets/ArcadeFont.ttf", 28);
-    if (!font) {
-        std::cerr << "Failed to load font: " << TTF_GetError() << std::endl;
-    }
+    if (!font) std::cerr << "Failed to load font: " << TTF_GetError() << std::endl;
 
     emscripten_set_main_loop(mainloop, 0, 1);
     
