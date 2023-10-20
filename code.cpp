@@ -1,4 +1,5 @@
 #include <SDL.h>
+#include <SDL_ttf.h>
 #include <SDL_mixer.h>
 #include <emscripten.h>
 #include <vector>
@@ -17,6 +18,9 @@ constexpr float TERMINAL_VELOCITY = 0.4f;
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
+
+TTF_Font* font = nullptr;
+SDL_Color textColor = { 255, 255, 255 };
 
 std::mt19937 gen(std::random_device{}());
 std::uniform_int_distribution<int> dist(0, HEIGHT - 180);
@@ -67,6 +71,7 @@ class Game {
 private:
     Bird bird;
     std::vector<Pipe> pipes;
+    int score = 0;
 
     inline void Reset() {
         bird = Bird();
@@ -77,6 +82,7 @@ private:
         if (successSound) {
             Mix_PlayChannel(-1, successSound, 0);
         }
+        score++;
     }
 public:
     Mix_Chunk* successSound = nullptr;
@@ -133,6 +139,20 @@ public:
         for (const auto& pipe : pipes) {
             pipe.Draw();
         }
+        
+        // Format the score string
+        char formattedScore[50]; // Assuming the score string will never exceed this length.
+        snprintf(formattedScore, sizeof(formattedScore), "SCORE   %04d", score);
+
+        // Render the score
+        SDL_Surface* scoreSurface = TTF_RenderText_Solid(font, formattedScore, textColor);
+        SDL_Texture* scoreTexture = SDL_CreateTextureFromSurface(renderer, scoreSurface);
+        SDL_Rect scoreRect = { 10, HEIGHT - scoreSurface->h - 10, scoreSurface->w, scoreSurface->h }; 
+        SDL_RenderCopy(renderer, scoreTexture, nullptr, &scoreRect);
+
+        SDL_DestroyTexture(scoreTexture);
+        SDL_FreeSurface(scoreSurface);
+
         SDL_RenderPresent(renderer);
     }
 };
@@ -159,6 +179,15 @@ int main() {
     game.successSound = Mix_LoadWAV("assets/pong.ogg");  // Load the sound effect
     if (!game.successSound) {
         std::cerr << "Failed to load sound: " << Mix_GetError() << std::endl;
+    }
+
+    if (TTF_Init() == -1) {
+        std::cerr << "SDL_ttf could not initialize! SDL_ttf Error: " << TTF_GetError() << std::endl;
+    }
+
+    font = TTF_OpenFont("assets/ArcadeFont.ttf", 28);
+    if (!font) {
+        std::cerr << "Failed to load font: " << TTF_GetError() << std::endl;
     }
 
     emscripten_set_main_loop(mainloop, 0, 1);
