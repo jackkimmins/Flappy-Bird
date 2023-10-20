@@ -86,6 +86,7 @@ private:
     }
 public:
     Mix_Chunk* successSound = nullptr;
+    Mix_Chunk* smackSound = nullptr;
 
     inline void HandleInput() {
         SDL_Event event;
@@ -121,7 +122,9 @@ public:
             if (bird.rect.x < pipe.x + 60 && bird.rect.x + bird.rect.w > pipe.x && 
                 (bird.rect.y < pipe.gapY || bird.rect.y + bird.rect.h > pipe.gapY + 180)) {
                 // Collision detected
-                pipe.hasPassed = true;
+                if (smackSound) {
+                    Mix_PlayChannel(-1, smackSound, 0);
+                }
                 Reset();
                 return;
             } else if (bird.rect.x > pipe.x + 60 && !pipe.hasPassed) {
@@ -180,10 +183,8 @@ int main() {
     window = SDL_CreateWindow("Flappy Bird", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
     renderer = SDL_CreateRenderer(window, -1, 0);
 
-    game.successSound = Mix_LoadWAV("assets/pong.ogg");  // Load the sound effect
-    if (!game.successSound) {
-        std::cerr << "Failed to load sound: " << Mix_GetError() << std::endl;
-    }
+    game.successSound = Mix_LoadWAV("assets/pass.ogg");
+    game.smackSound = Mix_LoadWAV("assets/smack.ogg");
 
     if (TTF_Init() == -1) {
         std::cerr << "SDL_ttf could not initialize! SDL_ttf Error: " << TTF_GetError() << std::endl;
