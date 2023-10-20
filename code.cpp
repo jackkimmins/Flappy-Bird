@@ -94,6 +94,10 @@ public:
                 emscripten_cancel_main_loop();
             } else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE) {
                 bird.Jump();
+            } 
+            // Handle touch/tap event for mobile devices
+            else if (event.type == SDL_FINGERDOWN) {
+                bird.Jump();
             }
         }
     }
