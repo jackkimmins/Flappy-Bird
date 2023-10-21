@@ -14,7 +14,7 @@ constexpr int HEIGHT = 720;
 constexpr float GRAVITY = 0.005f;
 constexpr float BIRD_JUMP = -0.8f;
 constexpr float PIPE_SPEED = 0.2f;
-constexpr float TERMINAL_VELOCITY = 0.4f;
+constexpr float TERMINAL_VELOCITY = 0.5f;
 
 SDL_Window* window = nullptr;
 SDL_Renderer* renderer = nullptr;
@@ -24,6 +24,12 @@ SDL_Color textColor = { 255, 255, 255 };
 
 std::mt19937 gen(std::random_device{}());
 std::uniform_int_distribution<int> dist(0, HEIGHT - 180);
+
+enum class GameState {
+    START,
+    RUNNING,
+    GAMEOVER
+};
 
 class Bird {
 public:
@@ -68,10 +74,26 @@ public:
 };
 
 class Game {
+public:
+    GameState gameState = GameState::START;
 private:
     Bird bird;
     std::vector<Pipe> pipes;
     int score = 0;
+
+    inline void StartGame() {
+        gameState = GameState::RUNNING;
+    }
+
+    inline void EndGame() {
+        if (smackSound) Mix_PlayChannel(-1, smackSound, 0);
+        gameState = GameState::GAMEOVER;
+    }
+
+    inline void ResetGame() {
+        Reset();
+        gameState = GameState::START;
+    }
 
     inline void Reset() {
         bird = Bird();
@@ -92,12 +114,15 @@ public:
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) {
                 emscripten_cancel_main_loop();
-            } else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE) {
+            } else if (gameState == GameState::RUNNING && 
+                       (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE)) {
                 bird.Jump();
-            } 
-            // Handle touch/tap event for mobile devices
-            else if (event.type == SDL_FINGERDOWN) {
+            } else if (gameState == GameState::RUNNING && event.type == SDL_FINGERDOWN) {
                 bird.Jump();
+            } else if (gameState == GameState::START && (event.type == SDL_KEYDOWN || event.type == SDL_FINGERDOWN)) {
+                StartGame();
+            } else if (gameState == GameState::GAMEOVER && (event.type == SDL_KEYDOWN || event.type == SDL_FINGERDOWN)) {
+                ResetGame();
             }
         }
     }
@@ -117,8 +142,7 @@ public:
             if (bird.rect.x < pipe.x + 60 && bird.rect.x + bird.rect.w > pipe.x && 
                 (bird.rect.y < pipe.gapY || bird.rect.y + bird.rect.h > pipe.gapY + 180)) {
                 // Collision detected
-                if (smackSound) Mix_PlayChannel(-1, smackSound, 0);
-                Reset();
+                EndGame();
                 return;
             } else if (bird.rect.x > pipe.x + 60 && !pipe.hasPassed) {
                 // Bird has passed through the pipe successfully
@@ -128,7 +152,7 @@ public:
         }
 
         if (bird.rect.y < 0 || bird.rect.y + bird.rect.h > HEIGHT) {
-            Reset();
+            EndGame();
         }
     }
 
@@ -153,6 +177,30 @@ public:
         SDL_DestroyTexture(scoreTexture);
         SDL_FreeSurface(scoreSurface);
 
+        // Add messages based on game state
+        if (gameState == GameState::START) {
+            SDL_Surface* startSurface = TTF_RenderText_Solid(font, "Tap or Press Any Key to Start", textColor);
+            SDL_Texture* startTexture = SDL_CreateTextureFromSurface(renderer, startSurface);
+            SDL_Rect startRect = { WIDTH / 2 - startSurface->w / 2, HEIGHT / 2 - startSurface->h / 2, startSurface->w, startSurface->h };
+            SDL_RenderCopy(renderer, startTexture, nullptr, &startRect);
+            SDL_DestroyTexture(startTexture);
+            SDL_FreeSurface(startSurface);
+        } else if (gameState == GameState::GAMEOVER) {
+            SDL_Surface* gameOverSurface = TTF_RenderText_Solid(font, "Game Over!", textColor);
+            SDL_Texture* gameOverTexture = SDL_CreateTextureFromSurface(renderer, gameOverSurface);
+            SDL_Rect gameOverRect = { WIDTH / 2 - gameOverSurface->w / 2, HEIGHT / 4, gameOverSurface->w, gameOverSurface->h };
+            SDL_RenderCopy(renderer, gameOverTexture, nullptr, &gameOverRect);
+            SDL_DestroyTexture(gameOverTexture);
+            SDL_FreeSurface(gameOverSurface);
+
+            SDL_Surface* restartSurface = TTF_RenderText_Solid(font, "Press any key to restart", textColor);
+            SDL_Texture* restartTexture = SDL_CreateTextureFromSurface(renderer, restartSurface);
+            SDL_Rect restartRect = { WIDTH / 2 - restartSurface->w / 2, HEIGHT / 2 - restartSurface->h / 2, restartSurface->w, restartSurface->h };
+            SDL_RenderCopy(renderer, restartTexture, nullptr, &restartRect);
+            SDL_DestroyTexture(restartTexture);
+            SDL_FreeSurface(restartSurface);
+        }
+
         SDL_RenderPresent(renderer);
     }
 };
@@ -165,7 +213,11 @@ extern "C" void mainloop() {
     lastTime = currentTime;
 
     game.HandleInput();
-    game.Update(deltaTime);
+    
+    if (game.gameState == GameState::RUNNING) { // Ensure the game updates only in RUNNING state
+        game.Update(deltaTime);
+    }
+
     game.Render();
 }
 
