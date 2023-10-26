@@ -83,6 +83,7 @@ private:
 
     inline void StartGame() {
         gameState = GameState::RUNNING;
+        score = 0;
     }
 
     inline void EndGame() {
@@ -97,7 +98,6 @@ private:
 
     inline void Reset() {
         bird = Bird();
-        score = 0;
         pipes.clear();
     }
 
