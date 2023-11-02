@@ -168,9 +168,11 @@ public:
     }
 
     inline void Render() {
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-        bird.Draw();
+	if (gameState != GameState::START){
+	  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	  SDL_RenderClear(renderer);
+	  bird.Draw();
+	}
         for (const auto& pipe : pipes) {
             pipe.Draw();
         }
