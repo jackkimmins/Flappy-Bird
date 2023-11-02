@@ -73,6 +73,16 @@ public:
     }
 };
 
+
+EM_JS(void, saveScore, (int highScore), {
+    localStorage.setItem('highScore', highScore);
+});
+
+EM_JS(int, getScore, (), {
+    var highScore = localStorage.getItem('highScore');
+    return highScore;
+});
+
 class Game {
 public:
     GameState gameState = GameState::START;
@@ -80,7 +90,7 @@ private:
     Bird bird;
     std::vector<Pipe> pipes;
     int score = 0;
-    int highScore = 0;
+    int highScore = getScore();
 
     inline void StartGame() {
         gameState = GameState::RUNNING;
@@ -166,6 +176,7 @@ public:
         }
 	if (score > highScore){
 	  highScore = score;
+	  saveScore(highScore);
 	}
         
         // Format the score string
