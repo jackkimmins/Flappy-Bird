@@ -73,6 +73,16 @@ public:
     }
 };
 
+
+EM_JS(void, saveScore, (int highScore), {
+    localStorage.setItem('highScore', highScore);
+});
+
+EM_JS(int, getScore, (), {
+    var highScore = localStorage.getItem('highScore');
+    return highScore;
+});
+
 class Game {
 public:
     GameState gameState = GameState::START;
@@ -80,9 +90,11 @@ private:
     Bird bird;
     std::vector<Pipe> pipes;
     int score = 0;
+    int highScore = getScore();
 
     inline void StartGame() {
         gameState = GameState::RUNNING;
+        score = 0;
     }
 
     inline void EndGame() {
@@ -97,7 +109,6 @@ private:
 
     inline void Reset() {
         bird = Bird();
-        score = 0;
         pipes.clear();
     }
 
@@ -115,7 +126,7 @@ public:
             if (event.type == SDL_QUIT) {
                 emscripten_cancel_main_loop();
             } else if (gameState == GameState::RUNNING && 
-                       (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE)) {
+                       (event.type == SDL_KEYDOWN && (event.key.keysym.sym == SDLK_SPACE  || event.key.keysym.sym == SDLK_UP || event.key.keysym.sym == SDLK_w ))) {
                 bird.Jump();
             } else if (gameState == GameState::RUNNING && event.type == SDL_FINGERDOWN) {
                 bird.Jump();
@@ -157,12 +168,18 @@ public:
     }
 
     inline void Render() {
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-        bird.Draw();
+	if (gameState != GameState::START){
+	  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	  SDL_RenderClear(renderer);
+	  bird.Draw();
+	}
         for (const auto& pipe : pipes) {
             pipe.Draw();
         }
+	if (score > highScore){
+	  highScore = score;
+	  saveScore(highScore);
+	}
         
         // Format the score string
         char formattedScore[50]; // Assuming the score string will never exceed this length.
@@ -176,6 +193,18 @@ public:
 
         SDL_DestroyTexture(scoreTexture);
         SDL_FreeSurface(scoreSurface);
+
+	char formattedHighScore[50]; // Assuming the score string will never exceed this length.
+        snprintf(formattedHighScore, sizeof(formattedHighScore), "HIGHSCORE   %04d", highScore);
+
+        // Render the Highscore
+        SDL_Surface* highScoreSurface = TTF_RenderText_Solid(font, formattedHighScore, textColor);
+        SDL_Texture* highScoreTexture = SDL_CreateTextureFromSurface(renderer, highScoreSurface);
+        SDL_Rect highScoreRect = { 10, HEIGHT - highScoreSurface->h - 30, highScoreSurface->w, highScoreSurface->h };
+        SDL_RenderCopy(renderer, highScoreTexture, nullptr, &highScoreRect);
+
+        SDL_DestroyTexture(highScoreTexture);
+        SDL_FreeSurface(highScoreSurface);
 
         // Add messages based on game state
         if (gameState == GameState::START) {
